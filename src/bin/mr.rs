@@ -3,7 +3,7 @@ use std::{
     env,
     fs::{self, DirBuilder, File},
     io::Read,
-    path::{PathBuf},
+    path::PathBuf,
 };
 
 use clap::{Parser, Subcommand};
@@ -21,9 +21,25 @@ struct Args {
 
 #[derive(Subcommand)]
 enum Commands {
-    Mark { name: Option<String> },
-    Recall { name: Option<String> },
-    Clear { name: Option<String> },
+    Mark {
+        /// Name of the mark to set. If no mark name is provided 'default' will be used instead.
+        #[arg(default_value_t = String::from("default"))]
+        name: String,
+    },
+    Recall {
+        /// Name of the mark to get. If no mark name is provided 'default' will be used instead.
+        #[arg(default_value_t = String::from("default"))]
+        name: String,
+    },
+    Clear {
+        /// Name of the mark to delete. If no mark name is provided 'default' will be used instead.
+        #[arg(default_value_t = String::from("default"))]
+        name: String,
+        #[arg(long, default_value_t = false)]
+        /// Delete all marks
+        all: bool,
+    },
+    List,
 }
 
 #[derive(Debug, Error)]
@@ -50,9 +66,10 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     match args.command {
-        Commands::Mark { name } => mark(name)?,
-        Commands::Recall { name } => println!("{}", recall(name)?.display()),
-        Commands::Clear { name } => clear(name)?,
+        Commands::Mark { name } => mark(&name)?,
+        Commands::Recall { name } => println!("{}", recall(&name)?.display()),
+        Commands::Clear { name, all } => clear(&name, all)?,
+        Commands::List => list()?,
     };
 
     Ok(())
@@ -91,9 +108,8 @@ fn save_marks(marks: &HashMap<String, PathBuf>) -> Result<(), Error> {
     Ok(())
 }
 
-fn mark(name: Option<String>) -> Result<(), Error> {
+fn mark(name: &str) -> Result<(), Error> {
     let mut marks = load_marks()?;
-    let name = name.unwrap_or("_".to_string());
     let path = env::current_dir()?;
 
     marks.insert(name.to_lowercase(), path);
@@ -102,9 +118,8 @@ fn mark(name: Option<String>) -> Result<(), Error> {
     Ok(())
 }
 
-fn recall(name: Option<String>) -> Result<PathBuf, Error> {
+fn recall(name: &str) -> Result<PathBuf, Error> {
     let marks = load_marks()?;
-    let name = name.unwrap_or("_".to_string());
 
     match marks.get(&name.to_lowercase()) {
         Some(path) => Ok(path.clone()),
@@ -114,18 +129,29 @@ fn recall(name: Option<String>) -> Result<PathBuf, Error> {
                     key: "the default path".to_string(),
                 })
             } else {
-                Err(Error::NoPathSet { key: name })
+                Err(Error::NoPathSet { key: name.to_string() })
             }
         }
     }
 }
 
-fn clear(name: Option<String>) -> Result<(), Error> {
+fn clear(name: &str, all: bool) -> Result<(), Error> {
     let mut marks = load_marks()?;
-    let name = name.unwrap_or("_".to_string());
-
-    marks.remove(&name.to_lowercase());
+    if all {
+        marks.clear();
+    } else {
+        marks.remove(&name.to_lowercase());
+    }
     save_marks(&marks)?;
+
+    Ok(())
+}
+
+fn list() -> Result<(), Error> {
+    let marks = load_marks()?;
+    for (name, path) in marks {
+        println!("{name}: {}", path.display());
+    }
 
     Ok(())
 }
