@@ -21,16 +21,19 @@ struct Args {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Marks the current working directory with the given name
     Mark {
         /// Name of the mark to set. If no mark name is provided 'default' will be used instead.
         #[arg(default_value_t = String::from("default"))]
         name: String,
     },
+    /// Returns the path of the directory marked with that name
     Recall {
         /// Name of the mark to get. If no mark name is provided 'default' will be used instead.
         #[arg(default_value_t = String::from("default"))]
         name: String,
     },
+    /// Removes the mark with that name
     Clear {
         /// Name of the mark to delete. If no mark name is provided 'default' will be used instead.
         #[arg(default_value_t = String::from("default"))]
@@ -39,6 +42,7 @@ enum Commands {
         /// Delete all marks
         all: bool,
     },
+    /// Lists all currently set marks
     List,
 }
 
